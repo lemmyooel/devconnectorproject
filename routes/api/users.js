@@ -2,10 +2,15 @@ const express = require('express');
 const router = express.Router();
 const gravatar = require('gravatar');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const passport = require('passport');
 
 
 //Loads User model 
 const User = require('../../models/User');
+
+//Loads keys
+const keys = require('../../config/keys');
 
 
 /*************** Test ROUTE *******************/
@@ -73,7 +78,7 @@ router.post('/register', (req,res) =>{
 
 /*************** LOGIN ROUTE *******************/
 // GET request for api/users/test
-// Tests Post Route
+// THis is the log in route 
 // Public Access 
 router.post('/login', (req,res) => {
   const email = req.body.email;
@@ -92,8 +97,27 @@ router.post('/login', (req,res) => {
                     //the promise returns a boolean whether password has matched or not
                     //check if passwords match
                     if(isMatch){
-                        //if it mathces
-                        res.json({msg: 'Success'})
+                       //User Matched
+                        //Creates the JST payload
+                       const payload = {
+                           id:user.id,
+                           name: user.name,
+                           avatar: user.avatar
+                       }
+
+                       //Assign token to the user
+                       jwt.sign(
+                           payload, 
+                           keys.secret,
+                           {expiresIn: 3600 },
+                           (err, token) => {
+                               res.json({
+                                   success: true,
+                                   token: 'Bearer ' + token
+                               })
+                           }
+                        
+                        );
                     }else {
                         //if it passwords doesnt match
                         return res.status(400).json({password: 'Password Incorrect'});
@@ -107,6 +131,20 @@ router.post('/login', (req,res) => {
 /*************** LOGIN ROUTE *******************/
 
 
+
+/*************** Current ROUTE *******************/
+// GET request for api/users/current
+// this returns the current user // also can be used for testing to check who is currently logged in 
+// Private Access
+router.get('/current', passport.authenticate('jwt',{session: false}), (req,res) =>{
+    res.json({
+        id: req.user.id,
+        name: req.user.name,
+        email: req.user.email
+    });
+})
+
+/*************** End of Test ROUTE *******************/
 
 
 
