@@ -6,14 +6,22 @@ const jwt = require('jsonwebtoken');
 const passport = require('passport');
 
 
+/***************  LOAD FILES  *******************/
+
+//Loads input Validation
+const validateRegisterInput = require('../../config/validation/register');
+//Loads LogIn Input Validation
+const validateLoginInput = require('../../config/validation/login');
 //Loads User model 
 const User = require('../../models/User');
-
 //Loads keys
 const keys = require('../../config/keys');
 
+/*************** End of LOAD FILES *******************/
+
 
 /*************** Test ROUTE *******************/
+
 // GET request for api/users/test
 // Tests Post Route
 // Public Access 
@@ -26,10 +34,21 @@ router.get('/test', (req,res) => {
 /*************** End of Test ROUTE *******************/
 
 /*************** Registration ROUTE *******************/
+
 // GET request for api/users/register
 // Registration  Route
 // Public Access 
 router.post('/register', (req,res) =>{
+    //need to validate the req.body object
+    // destructured the returned object from register.js and function validateregisterinput takes in 
+    //req.body bject and passed in as data in register js
+    const { errors, isValid } = validateRegisterInput(req.body);
+
+    //check validation
+    if(!isValid){
+        //if the object is not valid then we return 400 status wiht the errors object 
+        return res.status(400).json(errors);
+    }
     User.findOne({ email: req.body.email })
         .then((user) => {
             //checks if User email exists
@@ -74,6 +93,7 @@ router.post('/register', (req,res) =>{
         })
         .catch(err => console.log(err));
 })
+
 /*************** End of Test ROUTE *******************/
 
 /*************** LOGIN ROUTE *******************/
@@ -81,6 +101,19 @@ router.post('/register', (req,res) =>{
 // THis is the log in route 
 // Public Access 
 router.post('/login', (req,res) => {
+     //need to validate the req.body object
+    // destructured the returned object from register.js and function validateregisterinput takes in 
+    //req.body bject and passed in as data in register js
+    const { errors, isValid } = validateLoginInput(req.body);
+
+    //check validation
+    if(!isValid){
+        //if the object is not valid then we return 400 status wiht the errors object 
+        return res.status(400).json(errors);
+    }
+
+
+
   const email = req.body.email;
   const password = req.body.password;
 
@@ -89,7 +122,8 @@ router.post('/login', (req,res) => {
     .then((user) =>{
         //CHeck if User exists
         if(!user){
-            return  res.status(404).json({emai: 'User not found'});
+            errors.email = "User is not found"
+            return  res.status(404).json(errors);
         }else{
             //if user has been located need to compare the password with the stored hashed password in mongo DB
             bcrypt.compare(password, user.password)
@@ -120,7 +154,8 @@ router.post('/login', (req,res) => {
                         );
                     }else {
                         //if it passwords doesnt match
-                        return res.status(400).json({password: 'Password Incorrect'});
+                        errors.password = 'Password is Incorrect'
+                        return res.status(400).json(errors);
                     }
                 })
         }
@@ -129,6 +164,52 @@ router.post('/login', (req,res) => {
 });
 
 /*************** LOGIN ROUTE *******************/
+
+/*************** HANDLE ROUTE *******************/
+// GET request for api/users/handle/:handle
+// Fetches the profle by handle instead of ID  
+// Public Access // meaning even if youre not log in you can view this profile
+
+router.get('/handle/:handle', (req,res) => {
+    const errors = {};
+    Profile.findOne({handle: req.params.handle})
+        .populate('user', ['name' ,'avatar'])
+        .then((profile) => {
+            if(!profile){
+                errors.noprfile = 'No profile has been found for this user'
+                res.status(400).json(errors);
+            }else{
+                res.json(profile);
+            }
+        })
+        .catch(err => res.json(err));
+});
+
+
+/*************** End of Test ROUTE *******************/
+
+/*************** ID ROUTE *******************/
+// GET request for api/users/user/:user_id
+// Fetches the profle by user instead of params 
+// Public Access // meaning even if youre not log in you can view this profile
+
+router.get('/user/:user_id', (req,res) => {
+    const errors = {};
+    Profile.findOne({user: req.params.user_id})
+        .populate('user', ['name' ,'avatar'])
+        .then((profile) => {
+            if(!profile){
+                errors.noprfile = 'No profile has been found for this user'
+                res.status(400).json(errors);
+            }else{
+                res.json(profile);
+            }
+        })
+        .catch(err => res.json({profile: 'No profile for this user'}));
+});
+
+
+/*************** End of Test ROUTE *******************/
 
 
 
